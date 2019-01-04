@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -78,11 +79,9 @@ public class MainActivity extends AppCompatActivity implements MainCallback {
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
                 Log.d(TAG, "result: " + locationResult.toString());
-                Toast.makeText(MainActivity.this, locationResult.toString(), Toast.LENGTH_SHORT).show();
-                navigator.getRoute(locationResult.getLastLocation(), destinationPlaceId);
+                navigator.getRoute(locationResult.getLastLocation(), destinationPlaceId, Navigator.WALKING_MODE);
             }
         };
-
         handler = new Handler();
         rendererRunnable = new RendererRunnable(this, handler, arFragment);
         navigator = new Navigator(this);
@@ -93,14 +92,11 @@ public class MainActivity extends AppCompatActivity implements MainCallback {
         /*
          * Get Predictions for autocomplete menu
          */
-
         autoCompleteTextView = findViewById(R.id.autoCompleteMaps);
         autoCompleteTextView.getLocationOnScreen(autoCompleteTextViewLocation);
         autoCompleteTextView.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -108,9 +104,7 @@ public class MainActivity extends AppCompatActivity implements MainCallback {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {
-
-            }
+            public void afterTextChanged(Editable s) {}
         });
 
         autoCompleteTextView.setThreshold(1);   // will start working from first character
@@ -219,10 +213,11 @@ public class MainActivity extends AppCompatActivity implements MainCallback {
 
 
     @Override
-    public void onRoute(JSONObject jsonObject) {
-        RouteParser routeParser = new RouteParser(jsonObject);
-
-
+    public void onRoute(String totalDistance, String totalTime, String partialDistance, Uri arrow) {
+        ((TextView)findViewById(R.id.text_distance)).setText(totalDistance);
+        ((TextView)findViewById(R.id.text_duration)).setText(totalTime);
+        ((TextView)findViewById(R.id.text_curr_distance)).setText(partialDistance);
+        rendererRunnable.addObject(arrow);
     }
 
     @Override
@@ -231,11 +226,10 @@ public class MainActivity extends AppCompatActivity implements MainCallback {
         findViewById(R.id.autoCompleteMaps).setVisibility(View.VISIBLE);
     }
 
-    public void startButtonOnClick(View view) {
-        // ImageView
+    private void startNavigationMode(){
         Animation buttonAnimation = AnimationUtils.loadAnimation(this, R.anim.button_animation);
-        view.startAnimation(buttonAnimation);
-        view.setVisibility(View.GONE);
+        findViewById(R.id.start_button).startAnimation(buttonAnimation);
+        findViewById(R.id.start_button).setVisibility(View.GONE);
         // AutoCompleteTextView
         autoCompleteTextView.animate().translationYBy(-autoCompleteTextViewLocation[1]).translationXBy(autoCompleteTextViewLocation[0]).alpha(0.5f).setDuration(700).withEndAction(new Runnable() {
             @Override
@@ -250,33 +244,38 @@ public class MainActivity extends AppCompatActivity implements MainCallback {
 
                 }
                 ((TextView) findViewById(R.id.destination_text_view)).setText(str_temp.substring(0, i));
-
                 autoCompleteTextView.setVisibility(View.GONE);
                 findViewById(R.id.linear_layout_top).setVisibility(View.VISIBLE);
+                findViewById(R.id.linear_layout_bottom).setVisibility(View.VISIBLE);
             }
         });
+    }
 
+    private void stopNavigationMode(){
+        // return things to where they were
+        autoCompleteTextView.animate().translationYBy(autoCompleteTextViewLocation[1]).translationXBy(-autoCompleteTextViewLocation[0]).alpha(1f);
+        // draw stuff
+        findViewById(R.id.linear_layout_top).setVisibility(View.GONE);
+        findViewById(R.id.linear_layout_bottom).setVisibility(View.GONE);
+        autoCompleteTextView.setVisibility(View.VISIBLE);
+        autoCompleteTextView.getParent().requestChildFocus(autoCompleteTextView, autoCompleteTextView);
+        findViewById(R.id.start_button).setVisibility(View.VISIBLE);
+    }
+
+    public void startButtonOnClick(View view) {
+        startNavigationMode();
         requestingLocationUpdates = true;
         startLocationUpdates();
         stopRendering();
     }
 
     public void backButtonOnClick(View view) {
-        // return things to where they were
-        autoCompleteTextView.animate().translationYBy(autoCompleteTextViewLocation[1]).translationXBy(-autoCompleteTextViewLocation[0]).alpha(1f);
-        // draw stuff
-        findViewById(R.id.linear_layout_top).setVisibility(View.GONE);
-        autoCompleteTextView.setVisibility(View.VISIBLE);
-        autoCompleteTextView.getParent().requestChildFocus(autoCompleteTextView, autoCompleteTextView);
-        findViewById(R.id.start_button).setVisibility(View.VISIBLE);
-
+        stopNavigationMode();
         requestingLocationUpdates = false;
         stopLocationUpdates();
         startRendering();
     }
 
     @Override
-    public void onBackPressed() {
-
-    }
+    public void onBackPressed() {}
 }

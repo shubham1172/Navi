@@ -1,22 +1,33 @@
 package com.piedpiper.navi;
 
-import android.net.Uri;
+import android.location.Location;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class RouteParser {
+
+    private static final String TAG = RouteParser.class.getSimpleName();
+
     private JSONObject legs;
-    RouteParser(JSONObject jsonObject){
+
+    RouteParser() {
+
+    }
+
+    public void setLegs(JSONObject jsonObject) {
         try {
             this.legs = jsonObject.getJSONArray("routes").getJSONObject(0).getJSONArray("legs").getJSONObject(0);
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
     }
 
-    public String getTotalDistance(){
+    public JSONObject getLegs() {
+        return legs;
+    }
+
+    public String getTotalDistance() {
         try {
             return legs.getJSONObject("distance").getString("text");
         } catch (JSONException e) {
@@ -24,7 +35,15 @@ public class RouteParser {
         }
     }
 
-    public String getTotalTime(){
+    public int getTotalDistanceValue() {
+        try {
+            return legs.getJSONObject("distance").getInt("value");
+        } catch (JSONException e) {
+            return -1;
+        }
+    }
+
+    public String getTotalTime() {
         try {
             return legs.getJSONObject("duration").getString("text");
         } catch (JSONException e) {
@@ -32,24 +51,50 @@ public class RouteParser {
         }
     }
 
-    public Uri getArrowUri(){
-        String maneuver = "";
+    public int getTotalTimeValue() {
         try {
-            maneuver = legs.getJSONArray("steps").getJSONObject(0).getString("maneuver");
-        } catch (JSONException e){
-            // ignore
+            return legs.getJSONObject("duration").getInt("value");
+        } catch (JSONException e) {
+            return -1;
         }
-        maneuver = (maneuver==null)? "straight": maneuver;
-        if (maneuver.equals("straight")) {
-            return RendererRunnable.ARROW_STRAIGHT;
-        } else if (maneuver.contains("left")) {
-            return RendererRunnable.ARROW_LEFT;
-        } else if (maneuver.contains("right")) {
-            return RendererRunnable.ARROW_RIGHT;
-        } else if (maneuver.contains("u-turn")) {
-            return RendererRunnable.ARROW_UTURN;
+    }
+
+    public String getCurrentDistance() {
+        try {
+            return legs.getJSONArray("steps").getJSONObject(0).getJSONObject("distance").getString("text");
+        } catch (JSONException e) {
+            return e.toString();
         }
-        return RendererRunnable.ARROW_STRAIGHT;
+    }
+
+    public Location getNextEndPoint() {
+        Location location = null;
+        try {
+            JSONObject end_location = legs.getJSONArray("steps").getJSONObject(0).getJSONObject("end_location");
+            location = new Location("");
+            location.setLatitude(end_location.getDouble("lat"));
+            location.setLongitude(end_location.getDouble("lng"));
+            return location;
+        } catch (JSONException e) {
+            return location;
+        }
+    }
+
+    public int getNextStepDistanceValue() {
+        try {
+            return legs.getJSONArray("steps").getJSONObject(0).getJSONObject("distance").getInt("value");
+        } catch (JSONException e) {
+            return -1;
+        }
+    }
+
+    public int getNextStepDurationValue() {
+        try {
+            return legs.getJSONArray("steps").getJSONObject(0).getJSONObject("duration").getInt("value");
+        } catch (JSONException e) {
+            return -1;
+
+        }
     }
 
 }
